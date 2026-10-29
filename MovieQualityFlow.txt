@@ -1,0 +1,38 @@
+                 ┌─────────────────┐
+                 │    RAW Admin    │
+                 └────────┬────────┘
+                          │
+                          ↓
+                    Upload Movie
+                          │
+                          ↓
+                 ┌─────────────────┐
+                 │   Transcoder    │
+                 │     FFmpeg      │
+                 └────────┬────────┘
+                          │
+             ┌────────────┼────────────┐
+             ↓            ↓            ↓
+           480p         720p         1080p
+             │            │            │
+             └────────────┼────────────┘
+                          ↓
+                    HLS packaging
+                          │
+                          ↓
+                 Object Storage/CDN
+                          │
+                          ↓
+                 ┌─────────────────┐
+                 │  Spring Boot    │
+                 │ Auth + Security │
+                 └────────┬────────┘
+                          │
+                          ↓
+                 Subscription Check
+                          │
+                          ↓
+                    HLS Manifest
+                          │
+                          ↓
+                    React Player
