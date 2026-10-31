@@ -118,7 +118,7 @@ public class StorageController {
             return;
         }
 
-        // 5. Special handling for HLS playlists: Rewrite relative segment URLs to append signed token
+        // 5. Special handling for HLS playlists: Rewrite relative segment URLs to append signed token and filter variant streams by subscription tier
         if (objectKey.endsWith(".m3u8")) {
             response.setStatus(HttpServletResponse.SC_OK);
             response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
@@ -126,8 +126,37 @@ public class StorageController {
 
             java.util.List<String> lines = java.nio.file.Files.readAllLines(file.toPath(), java.nio.charset.StandardCharsets.UTF_8);
             StringBuilder rewritten = new StringBuilder();
+
+            boolean isMaster = objectKey.toLowerCase().endsWith("master.m3u8");
+            String allowedQuality = claims.getAllowedQuality() != null ? claims.getAllowedQuality().toLowerCase() : "1080p";
+
+            boolean skipNextUri = false;
             for (String line : lines) {
                 String trimmed = line.trim();
+
+                // Dynamic master playlist filtering: omit resolutions above user's subscription tier
+                if (isMaster) {
+                    if (trimmed.startsWith("#EXT-X-STREAM-INF:")) {
+                        String streamInfLower = trimmed.toLowerCase();
+                        boolean disallowed = false;
+                        if ("720p".equals(allowedQuality) && (streamInfLower.contains("1920x1080") || streamInfLower.contains("name=\"1080p\""))) {
+                            disallowed = true;
+                        } else if ("480p".equals(allowedQuality) && (streamInfLower.contains("1920x1080") || streamInfLower.contains("1280x720")
+                                || streamInfLower.contains("name=\"1080p\"") || streamInfLower.contains("name=\"720p\""))) {
+                            disallowed = true;
+                        }
+                        if (disallowed) {
+                            skipNextUri = true;
+                            continue;
+                        } else {
+                            skipNextUri = false;
+                        }
+                    } else if (skipNextUri && !trimmed.startsWith("#")) {
+                        skipNextUri = false;
+                        continue;
+                    }
+                }
+
                 if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
                     if (!trimmed.contains("token=")) {
                         line = trimmed + (trimmed.contains("?") ? "&token=" : "?token=") + token;

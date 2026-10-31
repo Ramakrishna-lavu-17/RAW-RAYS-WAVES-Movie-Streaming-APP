@@ -115,31 +115,24 @@ public class StorageTokenService {
         String lowerKey = objectKey.toLowerCase();
         String lowerAllowed = allowedQuality.toLowerCase();
 
-        // 1080p allows all renditions (1080p, 720p, 480p, master)
+        // Master manifest is permitted for all tiers (renditions inside are filtered according to plan)
+        if (lowerKey.endsWith("master.m3u8")) {
+            return true;
+        }
+
+        // 1080p allows all renditions (1080p, 720p, 480p)
         if ("1080p".equals(lowerAllowed)) {
             return true;
         }
 
-        // Standard: 720p allows 720p and 480p, rejects 1080p and master with 1080p
+        // Standard: 720p allows 720p and 480p, rejects 1080p
         if ("720p".equals(lowerAllowed)) {
-            if (lowerKey.contains("/1080p/")) {
-                return false;
-            }
-            if (lowerKey.endsWith("master.m3u8")) {
-                return false;
-            }
-            return true;
+            return !lowerKey.contains("/1080p/");
         }
 
         // Basic: 480p allows only 480p
         if ("480p".equals(lowerAllowed)) {
-            if (lowerKey.contains("/1080p/") || lowerKey.contains("/720p/")) {
-                return false;
-            }
-            if (lowerKey.endsWith("master.m3u8")) {
-                return false;
-            }
-            return true;
+            return !lowerKey.contains("/1080p/") && !lowerKey.contains("/720p/");
         }
 
         return false;
